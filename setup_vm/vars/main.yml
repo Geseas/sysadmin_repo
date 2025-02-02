@@ -1,0 +1,10 @@
+---
+# vars file for setup_vm
+hostnames:
+  dns: "dns"
+  appserver1: "appserver1"
+  appserver2: "appserver2"
+  db-primary: "db-primary"
+  db-secondary: "db-secondary"
+  bkp-server: "bkp-server"
+  zabbix: "zabbix"

@@ -1,0 +1,34 @@
+---
+# tasks file for setup_vm
+- name: Update and upgrade apt packages
+  become: yes
+  apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Set hostname
+  become: yes
+  hostname:
+    name: "{{ hostnames[inventory_hostname] }}"
+
+- name: Ensure the hostname is set in /etc/hostname
+  become: yes
+  copy:
+    dest: /etc/hostname
+    content: "{{ hostnames[inventory_hostname] }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure the hostname is set in /etc/hosts
+  become: yes
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: '127.0.1.1 {{ hostnames[inventory_hostname] }}'
+    state: present
+
+- name: Set timezone to Moscow
+  become: yes
+  timezone:
+    name: Europe/Moscow

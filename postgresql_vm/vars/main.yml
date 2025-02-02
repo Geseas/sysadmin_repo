@@ -1,0 +1,8 @@
+---
+# vars file for postgresql_vm
+postgresql_version: "14"
+postgresql_user: "postgres"
+postgresql_password: "s10669945"
+postgresql_db: "wikidb"
+postgresql_replication_user: "replicator"
+postgresql_replication_password: "s10669945"

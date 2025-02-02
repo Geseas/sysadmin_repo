@@ -1,0 +1,132 @@
+---
+# tasks file for postgresql_vm
+
+- name: Import PostgreSQL APT repository GPG key
+  become: yes
+  shell: |
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+  args:
+    creates: /etc/apt/trusted.gpg.d/postgresql.gpg
+
+- name: Add PostgreSQL APT repository to sources list
+  become: yes
+  copy:
+    dest: "/etc/apt/sources.list.d/pgdg.list"
+    content: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update APT package index
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: Install PostgreSQL packages
+  become: yes
+  apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-client-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
+    state: present
+
+- name: Ensure PostgreSQL is started and enabled
+  become: yes
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create PostgreSQL replication user (if applicable)
+  become: yes
+  command: >
+    psql -U postgres -c "CREATE ROLE \"{{ postgresql_replication_user }}\" WITH REPLICATION PASSWORD '{{ postgresql_replication_password }}' LOGIN;"
+  when: "'db-primary' in inventory_hostname or 'db-secondary' in inventory_hostname"
+  register: create_replication_user_result
+
+- name: Debug replication user creation result
+  debug:
+    var: create_replication_user_result
+
+- name: Create PostgreSQL database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ postgresql_db }}"
+    encoding: "UTF8"
+    lc_collate: "en_US.UTF-8"
+    lc_ctype: "en_US.UTF-8"
+    template: "template0"
+    state: "present"
+
+- name: Create PostgreSQL application user
+  become: yes
+  command: >
+    psql -U postgres -c "CREATE USER \"{{ postgresql_user }}\" WITH PASSWORD '{{ postgresql_password }}'; GRANT ALL PRIVILEGES ON DATABASE \"{{ postgresql_db }}\" TO \"{{ postgresql_user }}\";"
+  when: "'db-primary' in inventory_hostname or 'db-secondary' in inventory_hostname"
+  register: create_application_user_result
+
+- name: Debug application user creation result
+  debug:
+    var: create_application_user_result
+
+- name: Configure PostgreSQL primary server (if applicable)
+  become: yes
+  copy:
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    content: |
+      listen_addresses = '*'
+      wal_level = replica
+      max_wal_senders = 3
+      hot_standby = on
+      archive_mode = on
+      archive_command = '/bin/true'
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  when: "'db-primary' in inventory_hostname"
+
+- name: Configure PostgreSQL secondary server (if applicable)
+  become: yes
+  copy:
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/recovery.conf"
+    content: |
+      standby_mode = 'on'
+      primary_conninfo = 'host={{ hostvars['db-primary']['ansible_host'] }} port=5432 user={{ postgresql_replication_user }} password={{ postgresql_replication_password }}'
+      trigger_file = '/tmp/postgresql.trigger.5432'
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  when: "'db-secondary' in inventory_hostname"
+
+- name: Restart PostgreSQL service to apply changes
+  become: yes
+  systemd:
+    name: postgresql
+    state: restarted
+
+- name: Install pg_dump utility
+  become: yes
+  apt:
+    name: "postgresql-client-{{ postgresql_version }}"
+    state: present
+
+- name: Create backup directory
+  become: yes
+  file:
+    path: "/var/backups/postgresql"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+
+- name: Schedule daily backups using cron
+  become: yes
+  cron:
+    name: "Daily PostgreSQL backup"
+    minute: "0"
+    hour: "2"
+    job: "/usr/bin/pg_dump -U {{ postgresql_user }} -h {{ hostvars['db-primary']['ansible_host'] }} {{ postgresql_db }} > /var/backups/postgresql/{{ postgresql_db }}_$(date +\\%Y-\\%m-\\%d).sql"
+    user: postgres
+    cron_file: postgresql_backup
