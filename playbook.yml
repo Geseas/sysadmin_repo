@@ -3,16 +3,13 @@
   gather_facts: yes
   roles:
     - setup_vm
+    - users_vm
   become: yes
 
-- hosts: db_servers
+- hosts: db_servers, backup_server
   gather_facts: yes
   roles:
-    - postgresql_vm
-  become: yes
-
-- hosts: backup_server
-  gather_facts: yes
-  roles:
+    - setup_vm
+    - users_vm
     - postgresql_vm
   become: yes

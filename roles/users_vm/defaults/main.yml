@@ -1,0 +1,9 @@
+---
+- name: Create user admin
+  become: yes
+  user:
+  name: admin
+  password: "{{ admin_password | password_hash('sha512') }}"
+  shell: /bin/bash
+  createhome: yes
+  home: /home/admin

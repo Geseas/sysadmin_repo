@@ -1,2 +1,2 @@
-Пример репозитория для курса "Системный администратор" от Яндекс практикума.
-Облачная версия
+ansible-galaxy init users_vm
+ansible-galaxy init postgresql_vm
