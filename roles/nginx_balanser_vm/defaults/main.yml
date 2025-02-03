@@ -1,0 +1,9 @@
+# defaults
+nginx_config_file: "/etc/nginx/nginx.conf"
+nginx_sites_available_dir: "/etc/nginx/sites-available"
+nginx_sites_enabled_dir: "/etc/nginx/sites-enabled"
+nginx_worker_processes: "auto"
+nginx_worker_connections: 1024
+app_servers:
+  - appserver1
+  - appserver2

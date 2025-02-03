@@ -1,0 +1,72 @@
+# tasks
+---
+- name: Install Nginx
+  become: yes
+  apt:
+    name: "{{ nginx_package_name }}"
+    state: present
+
+- name: Start and enable Nginx service
+  become: yes
+  service:
+    name: "{{ nginx_service_name }}"
+    state: started
+    enabled: yes
+
+- name: Create sites-available directory if it doesn't exist
+  become: yes
+  file:
+    path: "{{ nginx_sites_available_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create sites-enabled directory if it doesn't exist
+  become: yes
+  file:
+    path: "{{ nginx_sites_enabled_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Copy default Nginx configuration
+  become: yes
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart_nginx
+
+- name: Copy upstream configuration for app servers
+  become: yes
+  template:
+    src: upstream.conf.j2
+    dest: "{{ nginx_sites_available_dir }}/upstream.conf"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable upstream configuration
+  become: yes
+  file:
+    src: "{{ nginx_sites_available_dir }}/upstream.conf"
+    dest: "{{ nginx_sites_enabled_dir }}/upstream.conf"
+    state: link
+
+- name: Test Nginx configuration
+  become: yes
+  command: nginx -t
+  register: nginx_test
+  failed_when: nginx_test.rc != 0
+  changed_when: false
+
+- name: Restart Nginx if configuration is valid
+  become: yes
+  service:
+    name: "{{ nginx_service_name }}"
+    state: restarted
+  when: nginx_test is defined and nginx_test.rc == 0
