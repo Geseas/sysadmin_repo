@@ -1,1 +1,8 @@
-admin_password: Admin373497!
+---
+- name: Create user admin
+  ansible.builtin.user:
+    name: admin
+    password: "{{ admin_password | password_hash('sha512') }}"
+    shell: /bin/bash
+    createhome: yes
+    home: /home/admin

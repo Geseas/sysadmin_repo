@@ -1,18 +1,22 @@
 ---
-- hosts: all
+- name: Configure all servers
+  hosts: all
   gather_facts: yes
   roles:
     - setup_vm
     - users_vm
+    - zabbix_agent_vm
   become: yes
 
-- hosts: db_servers:backup_server
+- name: Configure database and backup servers
+  hosts: db_servers:backup_server
   gather_facts: yes
   roles:
     - postgresql_vm
   become: yes
 
-- hosts: balanser
+- name: Configure balancer
+  hosts: balanser
   gather_facts: yes
   roles:
     - nginx_balancer_vm

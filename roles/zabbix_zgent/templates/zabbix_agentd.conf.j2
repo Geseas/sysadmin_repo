@@ -1,0 +1,9 @@
+# templates/zabbix_agentd.conf.j2
+Server={{ zabbix_server_ip }}
+ServerActive={{ zabbix_server_ip }}
+Hostname={{ ansible_hostname }}
+ListenPort={{ zabbix_server_port }}
+LogFile=/var/log/zabbix/zabbix_agentd.log
+LogFileSize=0
+PidFile=/var/run/zabbix/zabbix_agentd.pid
+Include=/etc/zabbix/zabbix_agentd.d/
