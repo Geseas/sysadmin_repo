@@ -8,13 +8,6 @@
     - zabbix_agent_vm
   become: yes
 
-- name: Configure database and backup servers
-  hosts: db_servers:backup_server
-  gather_facts: yes
-  roles:
-    - postgresql_vm
-  become: yes
-
 - name: Configure balancer
   hosts: balanser
   gather_facts: yes
